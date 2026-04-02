@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 Blind Test Spotify</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1DB954;
+    --black: #0a0a0a;
+    --dark: #121212;
+    --card: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #666;
+    --wrong: #e74c3c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 20% 20%, rgba(29,185,84,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 10vw, 5rem);
+    color: var(--green);
+    text-shadow: 0 0 40px rgba(29,185,84,0.4);
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .subtitle { color: var(--muted); font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 32px; }
+  .screen { width: 100%; max-width: 560px; display: none; flex-direction: column; gap: 16px; }
+  .screen.active { display: flex; }
+  .label { font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  input[type="text"] {
+    width: 100%; background: var(--card); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.78rem;
+    padding: 13px 15px; border-radius: 4px; outline: none; transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: var(--green); }
+  input[type="text"]::placeholder { color: var(--muted); }
+  select {
+    width: 100%; background: var(--card); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.72rem;
+    padding: 12px 14px; border-radius: 4px; outline: none; cursor: pointer;
+  }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+  .btn {
+    background: var(--green); color: #000; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem; letter-spacing: 0.1em; padding: 14px 28px;
+    border: none; border-radius: 4px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(29,185,84,0.35); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    font-family: 'Space Mono', monospace; font-size: 0.72rem; padding: 10px 20px;
+    border-radius: 4px; cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--green); color: var(--green); }
+  .notice {
+    font-size: 0.63rem; color: var(--muted); text-align: center;
+    line-height: 1.7; padding: 12px 16px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 6px;
+  }
+  .error-box {
+    color: var(--wrong); font-size: 0.72rem; padding: 12px 16px;
+    background: rgba(231,76,60,0.08); border: 1px solid rgba(231,76,60,0.3);
+    border-radius: 4px; display: none;
+  }
+  .login-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px 24px; text-align: center; display: flex; flex-direction: column; gap: 16px;
+  }
+  .login-card p { color: var(--muted); font-size: 0.7rem; line-height: 1.8; }
+  .spotify-logo { font-size: 2.5rem; }
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em;
+  }
+  .score-badge {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; color: var(--green); font-weight: 700;
+  }
+  .art-wrap { position: relative; width: 220px; height: 220px; margin: 0 auto; }
+  .album-art {
+    width: 100%; height: 100%; border-radius: 8px; object-fit: cover;
+    filter: blur(22px) brightness(0.25); transition: filter 0.6s ease; display: block;
+  }
+  .album-art.revealed { filter: blur(0) brightness(1); }
+  .art-overlay {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font-size: 3.5rem; transition: opacity 0.4s;
+  }
+  .art-overlay.hidden { opacity: 0; pointer-events: none; }
+  .player-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  .progress-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 14px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--green); width: 0%; transition: width 0.1s linear; border-radius: 2px; }
+  .controls { display: flex; gap: 12px; align-items: center; }
+  .play-btn {
+    width: 46px; height: 46px; background: var(--green); border: none; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; transition: transform 0.1s; flex-shrink: 0;
+  }
+  .play-btn:hover { transform: scale(1.06); }
+  .time-disp { color: var(--muted); font-size: 0.65rem; }
+  .answer-area { display: flex; flex-direction: column; gap: 12px; }
+  .feedback {
+    font-size: 0.7rem; padding: 10px 14px; border-radius: 4px; display: none; letter-spacing: 0.04em;
+  }
+  .feedback.correct { display: block; background: rgba(29,185,84,0.1); border: 1px solid rgba(29,185,84,0.3); color: var(--green); }
+  .feedback.wrong { display: block; background: rgba(231,76,60,0.08); border: 1px solid rgba(231,76,60,0.3); color: var(--wrong); }
+  .feedback.info { display: block; background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text); }
+  .action-row { display: flex; gap: 10px; justify-content: flex-end; }
+  .action-row .btn { width: auto; padding: 11px 24px; }
+  .big-score { font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; color: var(--green); text-shadow: 0 0 60px rgba(29,185,84,0.5); line-height: 1; text-align: center; }
+  .score-lbl { color: var(--muted); font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; text-align: center; }
+  .history { width: 100%; display: flex; flex-direction: column; gap: 7px; max-height: 300px; overflow-y: auto; }
+  .hist-item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; font-size: 0.67rem; }
+  .hist-item img { width: 34px; height: 34px; border-radius: 4px; object-fit: cover; }
+  .hist-meta { flex: 1; overflow: hidden; }
+  .hist-title { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-artist { color: var(--muted); font-size: 0.6rem; }
+  .hist-pts { font-size: 1rem; flex-shrink: 0; }
+  #screen-loading { align-items: center; gap: 14px; }
+  .spinner { width: 34px; height: 34px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-txt { color: var(--muted); font-size: 0.7rem; }
+  audio { display: none; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<h1>BLIND TEST</h1>
+<p class="subtitle">Powered by Spotify</p>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="spotify-logo">🎵</div>
+    <p>Pour accéder à ta playlist,<br>connecte-toi à ton compte Spotify.<br>C'est gratuit et sécurisé.</p>
+    <button class="btn" onclick="loginSpotify()">SE CONNECTER AVEC SPOTIFY</button>
+  </div>
+  <div class="notice">
+    🔒 Aucune donnée stockée. Seule la lecture<br>des playlists est demandée. Token valide 1h.
+  </div>
+</div>
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:0.65rem;color:var(--green)" id="user-greeting">✓ Connecté</span>
+    <button class="btn-ghost" onclick="logout()" style="padding:6px 14px;font-size:0.62rem">Déconnexion</button>
+  </div>
+  <div>
+    <div class="label">Lien de ta playlist Spotify</div>
+    <input type="text" id="playlist-url" placeholder="https://open.spotify.com/playlist/..." />
+  </div>
+  <div class="row">
+    <div>
+      <div class="label">Titres</div>
+      <select id="nb-tracks">
+        <option value="5">5 titres</option>
+        <option value="10" selected>10 titres</option>
+        <option value="15">15 titres</option>
+        <option value="20">20 titres</option>
+      </select>
+    </div>
+    <div>
+      <div class="label">Durée extrait</div>
+      <select id="preview-dur">
+        <option value="5">5 sec</option>
+        <option value="10" selected>10 sec</option>
+        <option value="15">15 sec</option>
+        <option value="30">30 sec</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn" onclick="startGame()">LANCER LE JEU</button>
+  <div class="error-box" id="setup-error"></div>
+  <div class="notice">🎵 Les extraits audio sont fournis via Deezer. Les titres introuvables sont ignorés.</div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen">
+  <div class="spinner"></div>
+  <span id="loading-txt">Chargement…</span>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div class="topbar">
+    <span id="track-ctr">Titre 1 / 10</span>
+    <div class="score-badge" id="score-disp">0 pts</div>
+    <button class="btn-ghost" onclick="quitGame()" style="padding:6px 12px;font-size:0.62rem">✕</button>
+  </div>
+  <div class="art-wrap">
+    <img class="album-art" id="album-art" src="" alt="cover" />
+    <div class="art-overlay" id="art-overlay">🎵</div>
+  </div>
+  <div class="player-card">
+    <div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar"></div></div>
+    <div class="controls">
+      <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
+      <span class="time-disp" id="time-disp">0:00 / 0:10</span>
+    </div>
+  </div>
+  <div class="answer-area">
+    <div>
+      <div class="label">Titre</div>
+      <input type="text" id="title-in" placeholder="Titre de la chanson…" onkeydown="if(event.key==='Enter')checkAnswer()" />
+    </div>
+    <div>
+      <div class="label">Artiste</div>
+      <input type="text" id="artist-in" placeholder="Nom de l'artiste…" onkeydown="if(event.key==='Enter')checkAnswer()" />
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="action-row">
+      <button class="btn-ghost" onclick="skipTrack()">Passer ⏭</button>
+      <button class="btn" id="check-btn" onclick="checkAnswer()">VALIDER</button>
+    </div>
+  </div>
+  <audio id="audio" onended="onEnded()" ontimeupdate="onTimeUpdate()"></audio>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen" style="align-items:center">
+  <div class="big-score" id="final-score">0</div>
+  <div class="score-lbl" id="final-lbl">points / 20</div>
+  <div class="history" id="history"></div>
+  <div class="row" style="width:100%;margin-top:8px">
+    <button class="btn-ghost" onclick="goSetup()">Nouvelle partie</button>
+    <button class="btn" onclick="replayGame()">Rejouer</button>
+  </div>
+</div>
+
+<script>
+// ─── SPOTIFY PKCE CONFIG ───────────────────────────────────────────
+// Client ID d'une app publique enregistrée sur developer.spotify.com
+// Redirect URI configuré : https://claude.ai/  +  fichiers locaux
+const CLIENT_ID = '6b71fd25ee9f43f5bcc3f37cfca40e13';
+const SCOPES = 'playlist-read-private playlist-read-collaborative';
+
+// Détecte l'URI de redirection dynamiquement
+function getRedirectURI() {
+  return location.origin + location.pathname;
+}
+
+// ─── STATE ─────────────────────────────────────────────────────────
+let accessToken = null;
+let tracks = [], currentIdx = 0, score = 0;
+let answered = false, previewDur = 10;
+let gameHistory = [], allTracksCache = null, cachedPID = null;
+
+// ─── PKCE ──────────────────────────────────────────────────────────
+function randHex(len) {
+  const a = new Uint8Array(len);
+  crypto.getRandomValues(a);
+  return Array.from(a, b => b.toString(16).padStart(2,'0')).join('');
+}
+async function sha256b64(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function loginSpotify() {
+  const verifier = randHex(32);
+  const challenge = await sha256b64(verifier);
+  sessionStorage.setItem('pkce_v', verifier);
+  const p = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: getRedirectURI(),
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    state: randHex(8)
+  });
+  location.href = 'https://accounts.spotify.com/authorize?' + p;
+}
+async function handleCallback(code) {
+  const verifier = sessionStorage.getItem('pkce_v');
+  if (!verifier) { show('screen-login'); return; }
+  show('screen-loading'); setTxt('loading-txt', 'Connexion Spotify…');
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: getRedirectURI(),
+        client_id: CLIENT_ID,
+        code_verifier: verifier
+      })
+    });
+    const d = await r.json();
+    if (!d.access_token) throw new Error(d.error_description || 'Auth échouée');
+    accessToken = d.access_token;
+    sessionStorage.setItem('sp_token', accessToken);
+    sessionStorage.removeItem('pkce_v');
+    history.replaceState({}, '', location.pathname);
+    await loadUser();
+  } catch(e) {
+    show('screen-login');
+    setErr('Erreur de connexion : ' + e.message);
+  }
+}
+async function loadUser() {
+  try {
+    const r = await fetch('https://api.spotify.com/v1/me', { headers: { Authorization: 'Bearer ' + accessToken } });
+    if (r.status === 401) { logout(); return; }
+    const u = await r.json();
+    document.getElementById('user-greeting').textContent = '👋 ' + (u.display_name || 'Connecté');
+  } catch(e) {}
+  show('screen-setup');
+}
+function logout() {
+  accessToken = null;
+  sessionStorage.removeItem('sp_token');
+  show('screen-login');
+}
+
+// ─── SCREENS ───────────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function setTxt(id, t) { document.getElementById(id).textContent = t; }
+function setErr(msg) {
+  const el = document.getElementById('setup-error');
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+// ─── FETCH PLAYLIST ────────────────────────────────────────────────
+function extractPID(url) {
+  const m = url.match(/playlist\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : null;
+}
+async function fetchPlaylist(pid) {
+  let all = [], offset = 0, total = 1;
+  while (offset < total) {
+    setTxt('loading-txt', 'Chargement… ' + all.length + ' titres');
+    const url = `https://api.spotify.com/v1/playlists/${pid}/tracks?limit=100&offset=${offset}&fields=total,items(track(id,name,artists,album(images)))`;
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+    if (r.status === 401) { logout(); throw new Error('Session expirée, reconnecte-toi'); }
+    if (r.status === 404) throw new Error('Playlist introuvable ou privée');
+    if (!r.ok) throw new Error('Erreur Spotify (' + r.status + ')');
+    const d = await r.json();
+    total = d.total;
+    all = all.concat(d.items.map(i => i.track).filter(t => t && t.name && t.artists?.length));
+    offset += 100;
+  }
+  return all;
+}
+
+async function getDeezerPreview(trackName, artistName) {
+  const q = encodeURIComponent(artistName + ' ' + trackName);
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent('https://api.deezer.com/search?q='+q+'&limit=1')}`,
+    `https://corsproxy.io/?https://api.deezer.com/search?q=${q}&limit=1`,
+    `https://cors-anywhere.herokuapp.com/https://api.deezer.com/search?q=${q}&limit=1`,
+  ];
+  for (const url of proxies) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const d = await r.json();
+      const preview = d.data?.[0]?.preview;
+      if (preview) return preview;
+    } catch { continue; }
+  }
+  return null;
+}
+
+// ─── START ─────────────────────────────────────────────────────────
+async function startGame() {
+  setErr('');
+  const urlVal = (document.getElementById('playlist-url').value || '').trim();
+  if (!urlVal) { setErr('Colle un lien de playlist Spotify !'); return; }
+  const pid = extractPID(urlVal);
+  if (!pid) { setErr('Lien invalide. Ex: open.spotify.com/playlist/...'); return; }
+  previewDur = parseInt(document.getElementById('preview-dur').value);
+  const nb = parseInt(document.getElementById('nb-tracks').value);
+  show('screen-loading'); setTxt('loading-txt', 'Chargement de la playlist…');
+  try {
+    let pool;
+    if (cachedPID === pid && allTracksCache) { pool = allTracksCache; }
+    else { pool = await fetchPlaylist(pid); allTracksCache = pool; cachedPID = pid; }
+    if (!pool.length) { show('screen-setup'); setErr('Playlist introuvable ou vide !'); return; }
+    const picked = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(nb * 3, pool.length));
+    setTxt('loading-txt', 'Recherche des extraits audio…');
+    const withPreview = [];
+    for (const t of picked) {
+      if (withPreview.length >= nb) break;
+      const preview = await getDeezerPreview(t.name, t.artists?.[0]?.name || '');
+      if (preview) withPreview.push({ ...t, preview_url: preview });
+      setTxt('loading-txt', `Extraits trouvés : ${withPreview.length} / ${nb}`);
+    }
+    if (!withPreview.length) { show('screen-setup'); setErr('Aucun extrait audio trouvé. Vérifie ta connexion ou essaie une autre playlist.'); return; }
+    tracks = withPreview;
+    currentIdx = 0; score = 0; gameHistory = [];
+    show('screen-game'); loadTrack();
+  } catch(e) { show('screen-setup'); setErr(e.message || 'Erreur de chargement'); }
+}
+
+// ─── GAME ──────────────────────────────────────────────────────────
+function loadTrack() {
+  answered = false;
+  const t = tracks[currentIdx];
+  const audio = document.getElementById('audio');
+  document.getElementById('title-in').value = '';
+  document.getElementById('artist-in').value = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('album-art').classList.remove('revealed');
+  document.getElementById('art-overlay').classList.remove('hidden');
+  document.getElementById('check-btn').disabled = false;
+  document.getElementById('prog-bar').style.width = '0%';
+  setTxt('track-ctr', 'Titre ' + (currentIdx+1) + ' / ' + tracks.length);
+  setTxt('score-disp', score + ' pts');
+  setTxt('time-disp', '0:00 / 0:' + String(previewDur).padStart(2,'0'));
+  document.getElementById('album-art').src = t.album?.images?.[0]?.url || '';
+  audio.src = t.preview_url;
+  audio.load();
+  audio.play().catch(() => {});
+  document.getElementById('play-btn').textContent = '⏸';
+  document.getElementById('title-in').focus();
+}
+function togglePlay() {
+  const a = document.getElementById('audio');
+  if (a.paused) { a.play(); document.getElementById('play-btn').textContent = '⏸'; }
+  else { a.pause(); document.getElementById('play-btn').textContent = '▶'; }
+}
+function onTimeUpdate() {
+  const a = document.getElementById('audio');
+  const max = Math.min(a.duration || previewDur, previewDur);
+  document.getElementById('prog-bar').style.width = Math.min(a.currentTime/max*100,100) + '%';
+  const mm = Math.floor(a.currentTime/60), ss = Math.floor(a.currentTime%60);
+  setTxt('time-disp', mm+':'+String(ss).padStart(2,'0')+' / 0:'+String(previewDur).padStart(2,'0'));
+  if (a.currentTime >= previewDur) { a.pause(); document.getElementById('play-btn').textContent = '▶'; }
+}
+function onEnded() { document.getElementById('play-btn').textContent = '▶'; }
+
+function norm(s) {
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
+}
+function similar(a, b) {
+  const na = norm(a), nb = norm(b);
+  if (!na||!nb) return false;
+  if (na===nb||na.includes(nb)||nb.includes(na)) return true;
+  if (Math.abs(na.length-nb.length)>5) return false;
+  let m=0;
+  for(let i=0;i<Math.min(na.length,nb.length);i++) if(na[i]===nb[i]) m++;
+  return m/Math.max(na.length,nb.length)>0.75;
+}
+function checkAnswer() {
+  if (answered) return;
+  const t = tracks[currentIdx];
+  const titleOk = similar(document.getElementById('title-in').value, t.name);
+  const artistOk = similar(document.getElementById('artist-in').value, t.artists?.[0]?.name||'');
+  const pts = titleOk&&artistOk?2:(titleOk||artistOk)?1:0;
+  score += pts; answered = true;
+  document.getElementById('album-art').classList.add('revealed');
+  document.getElementById('art-overlay').classList.add('hidden');
+  document.getElementById('check-btn').disabled = true;
+  const fb = document.getElementById('feedback');
+  const name = t.name, artist = t.artists?.[0]?.name||'';
+  if (pts===2) { fb.className='feedback correct'; fb.textContent='✅ Parfait ! "'+name+'" — '+artist+' (+2 pts)'; }
+  else if(pts===1){fb.className='feedback info';fb.textContent='👍 À moitié ! "'+name+'" — '+artist+' (+1 pt)';}
+  else{fb.className='feedback wrong';fb.textContent='❌ C\'était : "'+name+'" — '+artist;}
+  gameHistory.push({t,pts});
+  setTxt('score-disp', score+' pts');
+  setTimeout(nextTrack, 2300);
+}
+function skipTrack() {
+  if (answered) { nextTrack(); return; }
+  const t = tracks[currentIdx]; answered = true;
+  document.getElementById('album-art').classList.add('revealed');
+  document.getElementById('art-overlay').classList.add('hidden');
+  document.getElementById('check-btn').disabled = true;
+  const fb = document.getElementById('feedback');
+  fb.className='feedback wrong';
+  fb.textContent='⏭ Passé — "'+t.name+'" — '+(t.artists?.[0]?.name||'');
+  gameHistory.push({t,pts:0});
+  setTimeout(nextTrack,1800);
+}
+function nextTrack() {
+  currentIdx++;
+  if (currentIdx>=tracks.length) showResults(); else loadTrack();
+}
+function showResults() {
+  document.getElementById('audio').pause();
+  setTxt('final-score', score);
+  setTxt('final-lbl', 'points / '+(tracks.length*2));
+  const hist = document.getElementById('history');
+  hist.innerHTML='';
+  gameHistory.forEach(h=>{
+    const d=document.createElement('div'); d.className='hist-item';
+    const img=h.t.album?.images?.[2]?.url||h.t.album?.images?.[0]?.url||'';
+    d.innerHTML=(img?'<img src="'+img+'" alt="">':'<div style="width:34px;height:34px;background:var(--border);border-radius:4px"></div>')+
+      '<div class="hist-meta"><div class="hist-title">'+h.t.name+'</div><div class="hist-artist">'+(h.t.artists?.[0]?.name||'')+'</div></div>'+
+      '<div class="hist-pts">'+(h.pts===2?'✅':h.pts===1?'👍':'❌')+'</div>';
+    hist.appendChild(d);
+  });
+  show('screen-results');
+}
+function goSetup(){document.getElementById('audio').pause();show('screen-setup');}
+function quitGame(){document.getElementById('audio').pause();show('screen-setup');}
+function replayGame(){
+  document.getElementById('audio').pause();
+  currentIdx=0;score=0;gameHistory=[];
+  tracks=[...tracks].sort(()=>Math.random()-0.5);
+  show('screen-game');loadTrack();
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────
+(async function(){
+  const p = new URLSearchParams(location.search);
+  const code = p.get('code');
+  if (p.get('error')) { show('screen-login'); return; }
+  if (code) { await handleCallback(code); return; }
+  const saved = sessionStorage.getItem('sp_token');
+  if (saved) { accessToken = saved; await loadUser(); }
+  else { show('screen-login'); }
+})();
+</script>
+</body>
+</html>
